@@ -1,0 +1,6 @@
+version: 2.1
+jobs:
+  build:
+    machine: true
+    steps:
+      -run: echo "Hello CicleCI!"
