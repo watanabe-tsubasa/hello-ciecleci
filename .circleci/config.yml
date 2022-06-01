@@ -3,20 +3,45 @@ version: 2.1
 orbs:
   hugo: circleci/hugo@1.3.0
 
+workflows:
+  build-and-deploy:
+    jobs:
+      - build:
+          filters:
+            branches:
+                only:
+                  - main
+
 jobs:
   build:
     executor: hugo/default
     steps:
       - checkout
-      - run: hugo new site . --force
-      - run: git clone https://github.com/your-identity/hugo-theme-dimension.git themes/dimension
-      - run: |
-          new_hugo_config=$(mktemp)
-          cat config.toml | grep -v "baseURL" > $new_hugo_config
-          echo 'theme = "dimension"' >> $new_hugo_config
-          echo "baseURL = \"https://${CIRCLE_PROJECT_USERNAME}.github.io/${CIRCLE_PROJECT_REPONAME}\"" >> $new_hugo_config
-          mv $new_hugo_config config.toml
-      - run: |
-          hugo -D -d docs
+      - run: 
+          name: hugoでサイトを作成
+          command: hugo new site . --force
+      - run: 
+          name: テーマを追加
+          command: git clone https://github.com/your-identity/hugo-theme-dimension.git themes/dimension
+      - run:
+          name: hugoのコンフィグを修正
+          command: |
+            new_hugo_config=$(mktemp)
+            cat config.toml | grep -v "baseURL" > $new_hugo_config
+            echo 'theme = "dimension"' >> $new_hugo_config
+            echo "baseURL = \"https://${CIRCLE_PROJECT_USERNAME}.github.io/${CIRCLE_PROJECT_REPONAME}\"" >> $new_hugo_config
+            mv $new_hugo_config config.toml
+      - run:
+          name: サイトをビルド
+          command: hugo -D -d docs
       - store_artifacts:
           path: docs
+      - run:
+          name: release ブランチへコミットを追加
+          command: |
+            git config --global user.name "$(git show -s --format='%an' HEAD)"
+            git config --global user.email "$(git show -s --format='%ae' HEAD)"
+            git checkout -b release
+            git add .
+            git commit -m 'release hugo site'
+            git push origin release -f 
