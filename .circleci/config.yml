@@ -1,6 +1,22 @@
 version: 2.1
+
+orbs:
+  hugo: circleci/hugo@1.3.0
+
 jobs:
- build:
-   machine: true
-   steps:
-     - run: echo "Hello CircleCI!"
+  build:
+    executor: hugo/default
+    steps:
+      - checkout
+      - run: hugo new site . --force
+      - run: git clone https://github.com/your-identity/hugo-theme-dimension.git themes/dimension
+      - run: |
+          new_hugo_config=$(mktemp)
+          cat config.toml | grep -v "baseURL" > $new_hugo_config
+          echo 'theme = "dimension"' >> $new_hugo_config
+          echo "baseURL = \"https://${CIRCLE_PROJECT_USERNAME}.github.io/${CIRCLE_PROJECT_REPONAME}\"" >> $new_hugo_config
+          mv $new_hugo_config config.toml
+      - run: |
+          hugo -D -d docs
+      - store_artifacts:
+          path: docs
